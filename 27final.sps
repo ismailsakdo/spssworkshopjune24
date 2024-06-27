@@ -1,0 +1,446 @@
+* Encoding: UTF-8.
+
+*categorize the data according to the -ve question
+
+RECODE y10 (0=3) (1=2) (2=1) (3=0) INTO y10.n.
+VARIABLE LABELS  y10.n 'Converted Y10'.
+EXECUTE.
+
+RECODE yy4 (5=1) (4=2) (3=3) (2=4) (1=5) INTO yy4.n.
+VARIABLE LABELS  yy4.n 'Converted yy4'.
+EXECUTE.
+
+*compute function
+
+COMPUTE sumY=SUM(y1,y2,y3,y4,y5,y6,y7,y8,y9,y10.n).
+EXECUTE.
+
+COMPUTE sumYY=SUM(yy1,yy2,yy3,yy4.n,yy5).
+EXECUTE.
+
+*classification/ categorizing data
+
+RECODE sumY (Lowest thru 20=1) (20 thru Highest=2) INTO sumY.cat.
+EXECUTE.
+
+VARIABLE LABELS
+sumY.cat 'Stress Category'.
+
+VALUE LABELS
+sumY.cat
+1 Non Stress
+2 Stress.
+*======
+
+age = <30, 40 - 50, >50
+income = <2000, 2001 - 4000, >4000
+
+*categorize IVs (age and income)
+*Age
+
+RECODE x3 (Lowest thru 30=1) (31 thru 40=2) (40 thru Highest=3) INTO age.cat.
+EXECUTE.
+
+VARIABLE LABELS
+age.cat 'Age Category'.
+
+VALUE LABELS
+age.cat
+1 <30
+2 31-40
+3 >40.
+*======
+
+*Income
+
+RECODE x4 (Lowest thru 2000=1) (2001 thru 4000=2) (4001 thru Highest=3) INTO income.cat.
+EXECUTE.
+
+VARIABLE LABELS
+income.cat 'Income Category'.
+
+VALUE LABELS
+income.cat
+1 <2000
+2 2000 - 4000
+3 >4000.
+*======
+
+FREQUENCIES VARIABLES=x1 x2 age.cat income.cat x5
+  /ORDER=ANALYSIS.
+
+*MCT/ MD
+
+FREQUENCIES VARIABLES=x3 x4 sumY sumYY
+  /FORMAT=NOTABLE
+  /NTILES=4
+  /STATISTICS=STDDEV MEAN MEDIAN MODE
+  /ORDER=ANALYSIS.
+*===== EDA ends===
+
+*Normality Ptg
+
+EXAMINE VARIABLES=sumY sumYY x3 x4
+  /PLOT BOXPLOT STEMLEAF HISTOGRAM NPPLOT
+  /COMPARE GROUPS
+  /STATISTICS DESCRIPTIVES
+  /CINTERVAL 95
+  /MISSING LISTWISE
+  /NOTOTAL.
+
+*normality approach 2
+
+FREQUENCIES VARIABLES=sumY sumYY
+  /FORMAT=NOTABLE
+  /STATISTICS=MEAN MEDIAN MODE SKEWNESS SESKEW KURTOSIS SEKURT
+  /ORDER=ANALYSIS.
+
+*reliability test
+- test -retest
+- inter rater reliability
+- parralel form
+- internal item reliability
+
+RELIABILITY
+  /VARIABLES=y1 y2 y3 y4 y5 y6 y7 y8 y9 y10
+  /SCALE('ALL VARIABLES') ALL
+  /MODEL=ALPHA
+  /STATISTICS=DESCRIPTIVE SCALE
+  /SUMMARY=TOTAL.
+*=======Decriptive ends
+
+*one sample t-test
+
+T-TEST
+  /TESTVAL=15
+  /MISSING=ANALYSIS
+  /VARIABLES=sumY
+  /CRITERIA=CI(.95).
+
+FREQUENCIES VARIABLES=sumY
+  /FORMAT=NOTABLE
+  /STATISTICS=MEAN
+  /ORDER=ANALYSIS.
+
+T-TEST
+  /TESTVAL=17.6
+  /MISSING=ANALYSIS
+  /VARIABLES=sumY
+  /CRITERIA=CI(.95).
+
+*independent sample t-test
+
+T-TEST GROUPS=x1(1 2)
+  /MISSING=ANALYSIS
+  /VARIABLES=sumY
+  /CRITERIA=CI(.95).
+
+T-TEST GROUPS=x5(1 2)
+  /MISSING=ANALYSIS
+  /VARIABLES=sumY
+  /CRITERIA=CI(.95).
+
+* non parametric Mann Whitney - compare 2 groups not normal
+
+NPAR TESTS
+  /M-W= sumY BY x1(1 2)
+  /MISSING ANALYSIS.
+
+SORT CASES  BY x1.
+SPLIT FILE LAYERED BY x1.
+
+FREQUENCIES VARIABLES=sumY
+  /FORMAT=NOTABLE
+  /NTILES=4
+  /STATISTICS=MEDIAN
+  /ORDER=ANALYSIS.
+
+SPLIT FILE OFF.
+====
+
+NPAR TESTS
+  /M-W= sumY BY x5(1 2)
+  /MISSING ANALYSIS.
+
+SORT CASES  BY x5.
+SPLIT FILE LAYERED BY x5.
+
+FREQUENCIES VARIABLES=sumY
+  /FORMAT=NOTABLE
+  /NTILES=4
+  /STATISTICS=MEDIAN
+  /ORDER=ANALYSIS.
+
+SPLIT FILE OFF.
+=====
+
+*ANOVA
+
+ONEWAY sumY BY x2
+  /STATISTICS DESCRIPTIVES HOMOGENEITY 
+  /MISSING ANALYSIS
+  /POSTHOC=TUKEY ALPHA(0.05).
+
+ONEWAY sumY BY age.cat
+  /STATISTICS DESCRIPTIVES HOMOGENEITY 
+  /MISSING ANALYSIS
+  /POSTHOC=TUKEY ALPHA(0.05).
+
+
+ONEWAY sumY BY income.cat
+  /STATISTICS DESCRIPTIVES HOMOGENEITY 
+  /MISSING ANALYSIS
+  /POSTHOC=TUKEY ALPHA(0.05).
+
+*Kruskal Wallis
+
+NPAR TESTS
+  /K-W=sumY BY x2(1 3)
+  /MISSING ANALYSIS.
+
+SORT CASES  BY x2.
+SPLIT FILE LAYERED BY x2.
+
+FREQUENCIES VARIABLES=sumY
+  /FORMAT=NOTABLE
+  /NTILES=4
+  /STATISTICS=MEDIAN
+  /ORDER=ANALYSIS.
+
+SPLIT FILE OFF.
+
+====
+
+NPAR TESTS
+  /K-W=sumY BY age.cat(1 3)
+  /MISSING ANALYSIS.
+
+SORT CASES  BY age.cat.
+SPLIT FILE LAYERED BY age.cat.
+
+FREQUENCIES VARIABLES=sumY
+  /FORMAT=NOTABLE
+  /NTILES=4
+  /STATISTICS=MEDIAN
+  /ORDER=ANALYSIS.
+
+SPLIT FILE OFF.
+
+====
+
+NPAR TESTS
+  /K-W=sumY BY income.cat(1 3)
+  /MISSING ANALYSIS.
+
+SORT CASES  BY income.cat.
+SPLIT FILE LAYERED BY income.cat.
+
+FREQUENCIES VARIABLES=sumY
+  /FORMAT=NOTABLE
+  /NTILES=4
+  /STATISTICS=MEDIAN
+  /ORDER=ANALYSIS.
+
+SPLIT FILE OFF.
+
+*==== day 2 workshop 27June2024
+
+T-TEST PAIRS=sumY WITH sumYY (PAIRED)
+  /CRITERIA=CI(.9500)
+  /MISSING=ANALYSIS.
+
+NPAR TESTS
+  /WILCOXON=sumY WITH sumYY (PAIRED)
+  /MISSING ANALYSIS.
+
+FREQUENCIES VARIABLES=sumY sumYY
+  /FORMAT=NOTABLE
+  /NTILES=4
+  /STATISTICS=MEDIAN
+  /ORDER=ANALYSIS.
+
+*=== Correlation
+
+CORRELATIONS
+  /VARIABLES=x3 x4 sumY sumYY
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+SORT CASES  BY x1 x2.
+SPLIT FILE LAYERED BY x1 x2.
+
+CORRELATIONS
+  /VARIABLES=x3 x4 sumY sumYY
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+SPLIT FILE OFF.
+
+*======
+
+SORT CASES  BY age.cat.
+SPLIT FILE LAYERED BY age.cat.
+
+CORRELATIONS
+  /VARIABLES=x3 x4 sumY sumYY
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+SPLIT FILE OFF.
+
+*===spearman rho
+
+NONPAR CORR
+  /VARIABLES=x3 sumY
+  /PRINT=SPEARMAN TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+*==== Chi square
+
+NPAR TESTS
+  /CHISQUARE=x5
+  /EXPECTED=EQUAL
+  /MISSING ANALYSIS.
+
+*=== Chi Square different propotion/ not equal group
+
+NPAR TESTS
+  /CHISQUARE=x1
+  /EXPECTED=0.4 0.6
+  /MISSING ANALYSIS.
+
+NPAR TESTS
+  /CHISQUARE=x5
+  /EXPECTED=0.3 0.7
+  /MISSING ANALYSIS.
+
+*==== chi square test of indepdent (Chi Square 2) == Association/ relationship
+
+CROSSTABS
+  /TABLES=age.cat income.cat x5 BY sumY.cat
+  /FORMAT=AVALUE TABLES
+  /STATISTICS=CHISQ PHI 
+  /CELLS=COUNT COLUMN 
+  /COUNT ROUND CELL.
+
+
+*=== Logistic regression
+
+*robust and setup
+
+  LOGISTIC REGRESSION VARIABLES survived
+  /METHOD=ENTER pclass gender age 
+  /CONTRAST (gender)=Indicator
+  /CONTRAST (pclass)=Indicator
+  /CLASSPLOT
+  /PRINT=GOODFIT CI(95)
+  /CRITERIA=PIN(0.05) POUT(0.10) ITERATE(20) CUT(0.5).
+
+*robust + female as comparison/ reference
+
+LOGISTIC REGRESSION VARIABLES survived
+  /METHOD=ENTER pclass gender age 
+  /CONTRAST (gender)=Indicator(1)
+  /CONTRAST (pclass)=Indicator
+  /CLASSPLOT
+  /PRINT=GOODFIT CI(95)
+  /CRITERIA=PIN(0.05) POUT(0.10) ITERATE(20) CUT(0.5).
+
+*robust + female and class 1 as reference
+
+LOGISTIC REGRESSION VARIABLES survived
+  /METHOD=ENTER pclass gender age 
+  /CONTRAST (gender)=Indicator(1)
+  /CONTRAST (pclass)=Indicator(1)
+  /CLASSPLOT
+  /PRINT=GOODFIT CI(95)
+  /CRITERIA=PIN(0.05) POUT(0.10) ITERATE(20) CUT(0.5).
+
+*
+
+LOGISTIC REGRESSION VARIABLES survived
+  /METHOD=ENTER pclass gender age fare 
+  /CONTRAST (gender)=Indicator
+  /CONTRAST (pclass)=Indicator
+  /CLASSPLOT
+  /PRINT=GOODFIT CI(95)
+  /CRITERIA=PIN(0.05) POUT(0.10) ITERATE(20) CUT(0.5).
+
+*===
+
+LOGISTIC REGRESSION VARIABLES survived
+  /METHOD=ENTER pclass gender age 
+  /METHOD=ENTER pclass gender 
+  /CONTRAST (gender)=Indicator
+  /CONTRAST (pclass)=Indicator
+  /CLASSPLOT
+  /PRINT=GOODFIT CI(95)
+  /CRITERIA=PIN(0.05) POUT(0.10) ITERATE(20) CUT(0.5).
+
+*===== use our data last session 27June2024
+
+RECODE sumY.cat (2=1) (1=0) INTO sumY.n.
+EXECUTE.
+
+VALUE LABELS
+sumY.n
+1 'Stress'
+0 'Not Stress'.
+
+*logistic regression
+
+LOGISTIC REGRESSION VARIABLES sumY.n
+  /METHOD=ENTER x1 x2 x3 x4 x5 
+  /CONTRAST (x1)=Indicator
+  /CONTRAST (x2)=Indicator
+  /CONTRAST (x5)=Indicator
+  /CLASSPLOT
+  /PRINT=GOODFIT CI(95)
+  /CRITERIA=PIN(0.05) POUT(0.10) ITERATE(20) CUT(0.5).
+
+LOGISTIC REGRESSION VARIABLES sumY.n
+  /METHOD=ENTER x1 x2 x5 
+  /CONTRAST (x1)=Indicator
+  /CONTRAST (x2)=Indicator
+  /CONTRAST (x5)=Indicator
+  /CLASSPLOT
+  /PRINT=GOODFIT CI(95)
+  /CRITERIA=PIN(0.05) POUT(0.10) ITERATE(20) CUT(0.5).
+
+*==== linear regression
+
+REGRESSION
+  /DESCRIPTIVES MEAN STDDEV CORR SIG N
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) R ANOVA COLLIN TOL
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT sumY
+  /METHOD=ENTER x3 x4.
+
+RECODE x1 (1=1) (ELSE=0) INTO x1.m.
+EXECUTE.
+
+RECODE x1 (2=1) (ELSE=0) INTO x1.f.
+EXECUTE.
+
+*==== recode dummy variable
+
+RECODE x5 (1=1) (2=0) INTO x5.l.
+EXECUTE.
+
+RECODE x5 (2=1) (1=0) INTO x5.h.
+EXECUTE.
+
+*=== with dummy variables
+
+REGRESSION
+  /DESCRIPTIVES MEAN STDDEV CORR SIG N
+  /MISSING LISTWISE
+  /STATISTICS COEFF OUTS CI(95) R ANOVA COLLIN TOL
+  /CRITERIA=PIN(.05) POUT(.10)
+  /NOORIGIN 
+  /DEPENDENT sumY
+  /METHOD=ENTER x3 x1.m x1.f x5.l x5.h.
+
+
